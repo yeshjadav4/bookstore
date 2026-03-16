@@ -1,0 +1,15 @@
+<div class="flex justify-between items-center mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">New Book</h1>
+    <p class="text-slate-500 mt-1">Create a book record manually or adjust scraped data</p>
+  </div>
+  <div>
+    <%= link_to "Back to Books", admin_books_path,
+        class: "text-slate-500 hover:text-slate-700 font-medium px-4 py-2.5 rounded-lg transition" %>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+  <%= render "form", book: @book %>
+</div>
+

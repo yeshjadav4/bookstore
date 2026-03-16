@@ -1,0 +1,168 @@
+<!-- Hero Section -->
+<div class="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-10 px-4 sm:px-6 lg:px-8 py-14 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-b-3xl overflow-hidden">
+  <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoLTZWMzBoNnYtNmg2djZoLTZ6TTYgMzR2Nmgtdhwtnh2LTZoNnYtNmg2djZINnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30"></div>
+  <div class="relative text-center">
+    <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">Taxmann Bookstore</h1>
+    <p class="text-white/80 text-lg mb-8 max-w-xl mx-auto">Browse the latest books on Tax, Law, Finance & more from Taxmann Publications</p>
+
+    <!-- Search Form -->
+    <%= form_with url: books_path, method: :get, local: true, class: "max-w-2xl mx-auto flex" do %>
+      <input type="text" name="q" value="<%= params[:q] %>" placeholder="Search by book title..."
+        class="flex-1 px-5 py-3 rounded-l-xl border-0 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-yellow-300 outline-none text-lg" />
+      <button type="submit" class="bg-yellow-400 hover:bg-yellow-300 text-slate-800 font-semibold px-8 py-3 rounded-r-xl transition text-lg">
+        Search
+      </button>
+    <% end %>
+  </div>
+</div>
+
+<div class="flex flex-col lg:flex-row gap-8">
+  <!-- Sidebar Filters -->
+  <aside class="lg:w-64 shrink-0">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-8">
+      <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wider">Filters</h3>
+
+      <!-- Categories -->
+      <% if @categories.any? %>
+        <div class="mb-6">
+          <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Category</h4>
+          <div class="space-y-1.5">
+            <%= link_to "All Categories", books_path(params.permit(:q, :sort, :min_price, :max_price)),
+                class: "block text-sm #{ params[:category].blank? ? 'text-indigo-600 font-semibold' : 'text-slate-600 hover:text-indigo-600'} transition" %>
+            <% @categories.each do |cat| %>
+              <%= link_to cat, books_path(params.permit(:q, :sort, :min_price, :max_price).merge(category: cat)),
+                  class: "block text-sm #{ params[:category] == cat ? 'text-indigo-600 font-semibold' : 'text-slate-600 hover:text-indigo-600'} transition truncate" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Price Range -->
+      <%= form_with url: books_path, method: :get, local: true, class: "mb-6" do %>
+        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Price Range</h4>
+        <input type="hidden" name="q" value="<%= params[:q] %>" />
+        <input type="hidden" name="category" value="<%= params[:category] %>" />
+        <input type="hidden" name="sort" value="<%= params[:sort] %>" />
+        <div class="flex items-center space-x-2">
+          <input type="number" name="min_price" value="<%= params[:min_price] %>" placeholder="Min"
+            class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 outline-none" />
+          <span class="text-slate-400">-</span>
+          <input type="number" name="max_price" value="<%= params[:max_price] %>" placeholder="Max"
+            class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 outline-none" />
+        </div>
+        <button type="submit" class="mt-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium py-1.5 rounded-lg transition">Apply</button>
+      <% end %>
+
+      <!-- Sort -->
+      <div>
+        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Sort By</h4>
+        <div class="space-y-1.5">
+          <% [["Newest", "newest"], ["Price: Low to High", "price_asc"], ["Price: High to Low", "price_desc"], ["Title A-Z", "title"]].each do |label, val| %>
+            <%= link_to label, books_path(params.permit(:q, :category, :min_price, :max_price).merge(sort: val)),
+                class: "block text-sm #{ params[:sort] == val ? 'text-indigo-600 font-semibold' : 'text-slate-600 hover:text-indigo-600'} transition" %>
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Book Grid -->
+  <div class="flex-1">
+    <div class="flex items-center justify-between mb-6">
+      <p class="text-slate-500 text-sm"><%= @pagy.count %> books found</p>
+      <% if params[:q].present? || params[:category].present? %>
+        <%= link_to "Clear Filters", books_path, class: "text-sm text-indigo-600 hover:text-indigo-800 font-medium" %>
+      <% end %>
+    </div>
+
+    <% if @books.any? %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <% @books.each do |book| %>
+          <%= link_to book_path(book), class: "group block" do %>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+              <!-- Image -->
+              <div class="aspect-[3/4] bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-4 overflow-hidden">
+                <% if book.image_url.present? %>
+                  <img src="<%= book.image_url %>" alt="<%= book.title %>"
+                    class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                  <div class="hidden items-center justify-center text-slate-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                  </div>
+                <% else %>
+                  <div class="flex items-center justify-center text-slate-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                  </div>
+                <% end %>
+              </div>
+
+              <!-- Info -->
+              <div class="p-4">
+                <% if book.category.present? %>
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-2
+                    bg-gradient-to-r from-violet-100 to-fuchsia-100 text-violet-700">
+                    <%= book.category %>
+                  </span>
+                <% end %>
+                <h3 class="font-bold text-slate-800 text-sm leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors"><%= book.title %></h3>
+                <% if book.author.present? %>
+                  <p class="text-xs text-slate-400 mt-1 truncate">by <%= book.display_author %></p>
+                <% end %>
+                <div class="mt-3 flex items-center justify-between">
+                  <% if book.price.present? && book.price > 0 %>
+                    <% if book.discount? %>
+                      <div class="flex flex-col items-end">
+                        <span class="text-xs text-slate-400 line-through">
+                          &#8377; <%= number_with_delimiter(book.price.to_i) %>
+                        </span>
+                        <span class="text-lg font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                          &#8377; <%= number_with_delimiter(book.discounted_price.to_i) %>
+                        </span>
+                      </div>
+                    <% else %>
+                      <span class="text-lg font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                        &#8377; <%= number_with_delimiter(book.price.to_i) %>
+                      </span>
+                    <% end %>
+                  <% else %>
+                    <span class="text-sm text-slate-400">Price N/A</span>
+                  <% end %>
+                  <% if book.edition.present? %>
+                    <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium"><%= book.edition %></span>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-10 flex justify-center">
+        <nav class="flex items-center space-x-1">
+          <% if @pagy.prev %>
+            <%= link_to "Previous", books_path(params.permit(:q, :category, :sort, :min_price, :max_price).merge(page: @pagy.prev)),
+                class: "px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm font-medium transition" %>
+          <% end %>
+          <span class="px-4 py-2 text-sm text-slate-500">
+            Page <%= @pagy.page %> of <%= @pagy.pages %>
+          </span>
+          <% if @pagy.next %>
+            <%= link_to "Next", books_path(params.permit(:q, :category, :sort, :min_price, :max_price).merge(page: @pagy.next)),
+                class: "px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm font-medium transition" %>
+          <% end %>
+        </nav>
+      </div>
+    <% else %>
+      <div class="text-center py-20">
+        <div class="text-slate-300 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-600 mb-2">No books found</h3>
+        <p class="text-slate-400 mb-6">Add scraping URLs in the admin panel and run a scrape to populate books.</p>
+        <%= link_to "Go to Admin", admin_scraping_urls_path, class: "inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition font-medium" %>
+      </div>
+    <% end %>
+  </div>
+</div>

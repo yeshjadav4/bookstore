@@ -1,0 +1,165 @@
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-3xl font-bold text-slate-900">Books</h1>
+    <p class="text-slate-600 mt-2">Manage <span class="font-semibold"><%= @pagy.count %></span> books in your catalog</p>
+  </div>
+  <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex items-center gap-2">
+      <label for="per_page" class="text-sm font-medium text-slate-700">Per page:</label>
+      <%= form_with url: admin_books_path, method: :get, local: true, class: "inline" do %>
+        <select name="per_page" id="per_page"
+                class="px-3 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 bg-white hover:border-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                onchange="this.form.submit()">
+          <% [[10, 10], [20, 20], [50, 50], [100, 100]].each do |label, value| %>
+            <option value="<%= value %>" <%= (params[:per_page] || 20).to_i == value ? "selected" : "" %>><%= label %></option>
+          <% end %>
+        </select>
+      <% end %>
+    </div>
+    <%= link_to "View Store", root_path,
+        class: "px-4 py-2 rounded-lg font-medium text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 transition" %>
+    <%= link_to "+ New Book", new_admin_book_path,
+        class: "px-4 py-2 rounded-lg font-medium text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm" %>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-200">
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Title</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Author</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Category</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Price</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">ISBN</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide">Scraped</th>
+          <th class="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wide">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        <% @books.each do |book| %>
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-medium text-slate-900 max-w-xs truncate"><%= book.title %></div>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-600 max-w-[200px] truncate">
+              <%= book.display_author.presence || "—" %>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-600">
+              <% if book.category.present? %>
+                <span class="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium"><%= book.category %></span>
+              <% else %>
+                <span class="text-slate-400">—</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-slate-900">
+              <% if book.price.present? && book.price.to_f > 0 %>
+                ₹<%= number_with_delimiter(book.price.to_i) %>
+              <% else %>
+                <span class="text-slate-400 text-xs">N/A</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-xs text-slate-600 font-mono max-w-[120px] whitespace-normal break-all" title="<%= book.isbn %>">
+              <%= book.isbn.presence || "—" %>
+            </td>
+            <td class="px-6 py-4 text-sm text-slate-600">
+              <% if book.scraped_at %>
+                <span class="inline-block px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium"><%= time_ago_in_words(book.scraped_at) %> ago</span>
+              <% else %>
+                <span class="text-slate-400 text-xs">Manual</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <%= link_to book_path(book), target: "_blank", rel: "noopener", title: "View book",
+                    class: "p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                <% end %>
+                <%= link_to edit_admin_book_path(book), title: "Edit book",
+                    class: "p-2 rounded-lg hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 transition" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                <% end %>
+                <%= button_to admin_book_path(book), method: :delete, form: { class: "inline" },
+                    data: { turbo_confirm: "Delete this book? This action cannot be undone." }, title: "Delete book",
+                    class: "p-2 rounded-lg hover:bg-red-100 text-slate-600 hover:text-red-700 transition border-0 bg-transparent cursor-pointer" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+
+        <% if @books.empty? %>
+          <tr>
+            <td colspan="7" class="px-6 py-16 text-center">
+              <div class="flex flex-col items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <p class="text-slate-600 font-medium mb-1">No books found</p>
+                <p class="text-slate-500 text-sm mb-6">Start by scraping from Taxmann or creating a book manually.</p>
+                <%= link_to "+ Add Your First Book", new_admin_book_path,
+                    class: "inline-block px-4 py-2 rounded-lg font-medium text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm" %>
+              </td>
+            </tr>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if defined?(@pagy) && @pagy.pages > 0 %>
+  <div class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="text-sm text-slate-600">
+      Showing <span class="font-semibold text-slate-900"><%= @pagy.from %>–<%= @pagy.to %></span> of <span class="font-semibold text-slate-900"><%= @pagy.count %></span> books
+    </div>
+
+    <% if @pagy.pages > 1 %>
+      <nav class="flex items-center gap-1" aria-label="Pagination">
+        <% if @pagy.prev %>
+          <%= link_to admin_books_path(per_page: params[:per_page], page: @pagy.prev),
+              class: "inline-flex items-center px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition font-medium text-sm" do %>
+            ← Previous
+          <% end %>
+        <% else %>
+          <span class="inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-slate-400 bg-slate-50 font-medium text-sm cursor-not-allowed">← Previous</span>
+        <% end %>
+
+        <div class="flex items-center gap-1 mx-2 px-2 border-l border-r border-slate-200">
+          <% @pagy.series.compact.each do |item| %>
+            <% if item.is_a?(Integer) %>
+              <% if item == @pagy.page %>
+                <span class="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-2 rounded-lg bg-indigo-600 text-white font-medium text-sm">
+                  <%= item %>
+                </span>
+              <% else %>
+                <%= link_to item, admin_books_path(per_page: params[:per_page], page: item),
+                    class: "inline-flex items-center justify-center min-w-[2.5rem] px-2 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition font-medium text-sm" %>
+              <% end %>
+            <% elsif item == :gap %>
+              <span class="px-1 py-2 text-slate-400">…</span>
+            <% end %>
+          <% end %>
+        </div>
+
+        <% if @pagy.next %>
+          <%= link_to admin_books_path(per_page: params[:per_page], page: @pagy.next),
+              class: "inline-flex items-center px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition font-medium text-sm" do %>
+            Next →
+          <% end %>
+        <% else %>
+          <span class="inline-flex items-center px-3 py-2 rounded-lg border border-slate-200 text-slate-400 bg-slate-50 font-medium text-sm cursor-not-allowed">Next →</span>
+        <% end %>
+      </nav>
+    <% end %>
+  </div>
+<% end %>

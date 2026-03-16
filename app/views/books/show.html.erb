@@ -1,0 +1,124 @@
+<div class="mb-6">
+  <%= link_to "&larr; Back to Books".html_safe, books_path, class: "text-indigo-600 hover:text-indigo-800 font-medium text-sm transition" %>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
+    <!-- Book Image -->
+    <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-10 min-h-[400px]">
+      <% if @book.image_url.present? %>
+        <img src="<%= @book.image_url %>" alt="<%= @book.title %>"
+          class="max-h-[500px] max-w-full object-contain rounded-lg shadow-xl"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+        <div class="hidden items-center justify-center text-slate-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        </div>
+      <% else %>
+        <div class="text-slate-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Book Details -->
+    <div class="p-8 md:p-10">
+      <% if @book.category.present? %>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4
+          bg-gradient-to-r from-violet-100 to-fuchsia-100 text-violet-700">
+          <%= @book.category %>
+        </span>
+      <% end %>
+
+      <h1 class="text-3xl font-extrabold text-slate-800 leading-tight mb-3"><%= @book.title %></h1>
+
+      <% if @book.author.present? %>
+        <p class="text-slate-500 text-lg mb-6">by <span class="font-medium text-slate-700"><%= @book.display_author %></span></p>
+      <% end %>
+
+      <!-- Price -->
+      <div class="mb-8">
+        <% if @book.price.present? && @book.price > 0 %>
+          <% if @book.discount? %>
+            <div class="flex items-baseline gap-3">
+              <span class="text-xl text-slate-400 line-through">
+                &#8377; <%= number_with_delimiter(@book.price.to_i) %>
+              </span>
+              <span class="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                &#8377; <%= number_with_delimiter(@book.discounted_price.to_i) %>
+              </span>
+              <% if @book.discount_percent.present? %>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                  <%= @book.discount_percent.to_i %>% off
+                </span>
+              <% end %>
+            </div>
+          <% else %>
+            <span class="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              &#8377; <%= number_with_delimiter(@book.price.to_i) %>
+            </span>
+          <% end %>
+        <% else %>
+          <span class="text-xl text-slate-400">Price not available</span>
+        <% end %>
+      </div>
+
+      <!-- Details Table -->
+      <div class="bg-slate-50 rounded-xl p-5 mb-6">
+        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Book Details</h3>
+        <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <% if @book.isbn.present? %>
+            <dt class="text-slate-500">ISBN</dt>
+            <dd class="font-medium text-slate-800"><%= @book.isbn %></dd>
+          <% end %>
+          <% if @book.publisher.present? %>
+            <dt class="text-slate-500">Publisher</dt>
+            <dd class="font-medium text-slate-800"><%= @book.publisher %></dd>
+          <% end %>
+          <% if @book.edition.present? %>
+            <dt class="text-slate-500">Edition</dt>
+            <dd class="font-medium text-slate-800">
+              <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-semibold"><%= @book.edition %></span>
+            </dd>
+          <% end %>
+          <% if @book.pages.present? && @book.pages > 0 %>
+            <dt class="text-slate-500">Pages</dt>
+            <dd class="font-medium text-slate-800"><%= @book.pages %></dd>
+          <% end %>
+          <% if @book.rating.present? %>
+            <dt class="text-slate-500">Rating</dt>
+            <dd class="font-medium text-slate-800"><%= @book.rating %> / 5</dd>
+          <% end %>
+          <% if @book.reviews_count.present? && @book.reviews_count > 0 %>
+            <dt class="text-slate-500">Reviews</dt>
+            <dd class="font-medium text-slate-800"><%= @book.reviews_count %></dd>
+          <% end %>
+          <% if @book.scraped_at.present? %>
+            <dt class="text-slate-500">Last Updated</dt>
+            <dd class="font-medium text-slate-800"><%= @book.scraped_at.strftime("%b %d, %Y %H:%M") %></dd>
+          <% end %>
+        </dl>
+      </div>
+
+      <!-- View on Taxmann -->
+      <% if @book.source_url.present? %>
+        <%= link_to @book.source_url, target: "_blank", rel: "noopener",
+            class: "inline-flex items-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-md" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          View on Taxmann
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Description -->
+  <% if @book.description.present? %>
+    <div class="border-t border-slate-200 p-8 md:p-10">
+      <h2 class="text-xl font-bold text-slate-800 mb-4">Description</h2>
+      <div class="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+        <%= simple_format(@book.description) %>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,109 @@
+<%= form_with model: [:admin, book], class: "space-y-6" do |f| %>
+  <% if book.errors.any? %>
+    <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <h3 class="font-medium mb-2">Please fix the following errors:</h3>
+      <ul class="list-disc pl-5 text-sm">
+        <% book.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <%= f.label :title, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :title,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :author, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :author,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :price, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 text-sm">&#8377;</span>
+        <%= f.number_field :price, step: 0.01,
+            class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+      </div>
+    </div>
+
+    <div>
+      <%= f.label :discount_percent, "Discount %", class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.number_field :discount_percent, step: 0.1, min: 0, max: 100,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+      <p class="text-xs text-slate-400 mt-1">Set a manual discount percentage to show before/after prices.</p>
+    </div>
+
+    <div>
+      <%= f.label :isbn, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :isbn,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :publisher, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :publisher,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :edition, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :edition,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :pages, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.number_field :pages,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :category, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :category,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :rating, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.number_field :rating, step: 0.1,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div>
+      <%= f.label :reviews_count, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.number_field :reviews_count,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div class="md:col-span-2">
+      <%= f.label :image_url, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :image_url, placeholder: "https://cdn.taxmann.com/BookshopFiles/Bookimg/...",
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+    </div>
+
+    <div class="md:col-span-2">
+      <%= f.label :source_url, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_field :source_url, placeholder: "https://www.taxmann.com/bookstore/product/...",
+          class: "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" %>
+      <p class="text-xs text-slate-400 mt-1">Optional: original Taxmann product URL for reference</p>
+    </div>
+
+    <div class="md:col-span-2">
+      <%= f.label :description, class: "block text-sm font-medium text-slate-700 mb-1" %>
+      <%= f.text_area :description, rows: 6,
+          class: "w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition resize-y" %>
+    </div>
+  </div>
+
+  <div class="flex items-center space-x-3 pt-4">
+    <%= f.submit class: "bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-lg transition shadow-sm cursor-pointer" %>
+    <%= link_to "Cancel", admin_books_path, class: "text-slate-500 hover:text-slate-700 font-medium px-4 py-2.5 transition" %>
+  </div>
+<% end %>
+
