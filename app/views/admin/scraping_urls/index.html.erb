@@ -1,0 +1,75 @@
+<div class="flex justify-between items-center mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Scraping URLs</h1>
+    <p class="text-slate-500 mt-1">Manage the URLs you want to scrape from Taxmann Bookstore</p>
+  </div>
+  <div class="flex items-center space-x-3">
+    <%= button_to "Scrape All Now", scrape_all_admin_scraping_urls_path, method: :post,
+        class: "bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2.5 rounded-lg transition shadow-sm" %>
+    <%= link_to "Add URL", new_admin_scraping_url_path,
+        class: "bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg transition shadow-sm" %>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+  <table class="w-full">
+    <thead class="bg-slate-50 border-b border-slate-200">
+      <tr>
+        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">URL / Label</th>
+        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+        <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Scraped</th>
+        <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% @scraping_urls.each do |su| %>
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4">
+            <div class="font-medium text-slate-800"><%= su.label.presence || "No label" %></div>
+            <div class="text-xs text-slate-400 mt-0.5 truncate max-w-md"><%= su.url %></div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+              <%= su.product? ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' %>">
+              <%= su.url_type.capitalize %>
+            </span>
+          </td>
+          <td class="px-6 py-4">
+            <% if su.active? %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Active</span>
+            <% else %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Inactive</span>
+            <% end %>
+          </td>
+          <td class="px-6 py-4 text-sm text-slate-500">
+            <%= su.last_scraped_at ? time_ago_in_words(su.last_scraped_at) + " ago" : "Never" %>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <div class="flex items-center justify-end space-x-2">
+              <%= button_to su.active? ? "Pause" : "Resume", toggle_active_admin_scraping_url_path(su), method: :post,
+                  class: "text-xs px-3 py-1 rounded-md border #{su.active? ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'} transition" %>
+              <%= button_to "Scrape", scrape_now_admin_scraping_url_path(su), method: :post,
+                  class: "text-xs px-3 py-1 rounded-md border border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition" %>
+              <%= link_to "Edit", edit_admin_scraping_url_path(su),
+                  class: "text-xs px-3 py-1 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 transition" %>
+              <%= button_to "Delete", admin_scraping_url_path(su), method: :delete,
+                  data: { turbo_confirm: "Remove this URL?" },
+                  class: "text-xs px-3 py-1 rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition" %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+
+      <% if @scraping_urls.empty? %>
+        <tr>
+          <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+            <p class="text-lg font-medium">No URLs added yet</p>
+            <p class="mt-1">Add a Taxmann bookstore URL to start scraping.</p>
+            <%= link_to "Add First URL", new_admin_scraping_url_path, class: "inline-block mt-4 bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
