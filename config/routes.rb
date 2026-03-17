@@ -13,7 +13,9 @@ Rails.application.routes.draw do
   end
 
   namespace :admin do
-    resources :books
+    resources :books do
+      resources :book_images, only: [:index, :destroy]
+    end
     resources :scraping_urls do
       member do
         post :toggle_active

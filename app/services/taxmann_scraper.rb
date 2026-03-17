@@ -119,16 +119,33 @@ class TaxmannScraper
             extract_title_from_dom(doc) ||
             extract_title_from_text(page_text)
 
+    title = nil unless valid_title?(title)
+    title ||= title_from_url(@url)
+
     author = extract_author_from_ld(product_ld, book_ld) ||
              extract_author_from_dom(doc) ||
              extract_author_from_text(page_text)
 
-    price = extract_price_from_ld(product_ld) ||
-            extract_price_from_text(page_text)
+    # Extract both original and discounted prices
+    prices_data = extract_prices_and_discount(doc, page_text, product_ld)
+    price = prices_data[:original_price]
+    discount_percent = prices_data[:discount_percent]
 
-    image_urls = Array(product_ld["image"] || book_ld["image"]).presence || extract_images_from_dom(doc)
-    primary_image = image_urls.first
-    extra_images = image_urls.drop(1)
+    carousel_urls = extract_carousel_images_from_browser
+
+    # Prefer only the product carousel thumbnails (requested behavior).
+    image_urls =
+      if carousel_urls.any?
+        carousel_urls
+      else
+        []
+          .concat(Array(product_ld["image"] || book_ld["image"]))
+          .concat(extract_images_from_dom(doc))
+          .concat(extract_images_from_browser)
+      end
+    image_urls = image_urls.map(&:to_s).map(&:strip).reject(&:blank?).uniq
+
+    Rails.logger.info("[TaxmannScraper] Extracted #{image_urls.size} image(s) for #{@url}")
 
     description = product_ld.dig("description") ||
                   book_ld.dig("description") ||
@@ -157,8 +174,9 @@ class TaxmannScraper
       title: title,
       author: author,
       price: price,
-      image_url: primary_image,
-      extra_image_urls: extra_images,
+      discount_percent: discount_percent,
+      image_url: image_urls.first,
+      image_urls: image_urls,
       description: description.to_s.strip.presence,
       isbn: isbn,
       publisher: publisher,
@@ -196,12 +214,18 @@ class TaxmannScraper
     offers = product.dig("offers")
     return unless offers
 
-    case offers
-    when Hash
-      offers.dig("price")&.to_f
-    when Array
-      offers.first&.dig("price")&.to_f
-    end
+    prices = case offers
+             when Hash
+               [offers.dig("price")&.to_f].compact
+             when Array
+               offers.filter_map { |o| o.dig("price")&.to_f }
+             else
+               []
+             end
+
+    return if prices.empty?
+
+    prices.max
   end
 
   def extract_property(product, name)
@@ -219,6 +243,9 @@ class TaxmannScraper
 
   def extract_title_from_dom(doc)
     selectors = [
+      "[itemprop='name']",
+      "[class*='productName'] h1", "[class*='product-name'] h1", "[class*='ProductName'] h1",
+      "[class*='bookTitle'] h1", "[class*='book-title'] h1", "[class*='BookTitle'] h1",
       "h1",
       "[class*='productName']", "[class*='product-name']", "[class*='ProductName']",
       "[class*='bookTitle']", "[class*='book-title']", "[class*='BookTitle']",
@@ -227,7 +254,8 @@ class TaxmannScraper
     selectors.each do |sel|
       doc.css(sel).each do |node|
         text = node.text.strip
-        return text if text.present? && text.length > 3 && text.length < 500
+        next unless valid_title?(text)
+        return text
       end
     end
     nil
@@ -249,21 +277,238 @@ class TaxmannScraper
 
   def extract_images_from_dom(doc)
     selectors = [
+      "meta[property='og:image']",
+      "meta[name='twitter:image']",
+      "link[rel='image_src']",
       "img[src*='BookshopFiles']", "img[src*='Bookimg']", "img[src*='bookimg']",
       "img[src*='cdn.taxmann.com']",
       ".product-image img", "[class*='productImage'] img",
-      "[class*='product-img'] img", "[class*='bookImage'] img"
+      "[class*='product-img'] img", "[class*='bookImage'] img",
+      "[class*='thumb'] img", "[class*='thumbnail'] img",
+      "[class*='carousel'] img", "[class*='slider'] img", "[class*='slick'] img",
+      "img[data-zoom-image]", "img[data-large]", "img[data-large-image]", "img[data-src]", "img"
     ]
+
     urls = []
+
     selectors.each do |sel|
-      doc.css(sel).each do |img|
-        src = img["src"] || img["data-src"]
-        next unless src.present?
-        full = src.start_with?("http") ? src : "#{BASE_URL}#{src}"
-        urls << full
+      doc.css(sel).each do |node|
+        if node.name == "meta"
+          urls << node["content"]
+          next
+        end
+
+        if node.name == "link"
+          urls << node["href"]
+          next
+        end
+
+        urls.concat(image_urls_from_img(node))
       end
     end
-    urls.uniq
+
+    urls.filter_map { |u| normalize_image_url(u) }.uniq
+  end
+
+  def extract_images_from_browser
+    Array(
+      @browser.evaluate(<<~JS)
+        (() => {
+          const out = [];
+
+          const add = (v) => {
+            if (!v) return;
+            if (Array.isArray(v)) { v.forEach(add); return; }
+            out.push(String(v));
+          };
+
+          document.querySelectorAll('img').forEach((img) => {
+            add(img.getAttribute('data-zoom-image'));
+            add(img.getAttribute('data-large'));
+            add(img.getAttribute('data-large-image'));
+            add(img.getAttribute('data-src'));
+            add(img.getAttribute('src'));
+
+            const srcset = img.getAttribute('srcset') || '';
+            srcset.split(',').forEach((entry) => {
+              const url = entry.trim().split(/\s+/)[0];
+              if (url) add(url);
+            });
+          });
+
+          document.querySelectorAll('[style*="background-image"]').forEach((el) => {
+            const style = el.getAttribute('style') || '';
+            const m = style.match(/background-image\s*:\s*url\((['"]?)(.*?)\1\)/i);
+            if (m && m[2]) add(m[2]);
+          });
+
+          return Array.from(new Set(out));
+        })()
+      JS
+    )
+  rescue StandardError
+    []
+  end
+
+  def extract_carousel_images_from_browser
+    seen = []
+    stagnant_rounds = 0
+
+    12.times do
+      payload = @browser.evaluate(carousel_extract_js)
+      urls = Array(payload["urls"]).filter_map { |u| normalize_image_url(u) }.uniq
+      new_seen = (seen + urls).uniq
+
+      stagnant_rounds = new_seen.size == seen.size ? stagnant_rounds + 1 : 0
+      seen = new_seen
+
+      clicked = payload["clicked"] == true
+      break if !clicked || stagnant_rounds >= 2
+
+      sleep(0.4)
+    end
+
+    seen
+  rescue StandardError
+    []
+  end
+
+  def carousel_extract_js
+    <<~JS
+      (() => {
+        const imgUrlsFrom = (root) => {
+          const out = [];
+          const add = (v) => {
+            if (!v) return;
+            if (Array.isArray(v)) { v.forEach(add); return; }
+            out.push(String(v));
+          };
+          root.querySelectorAll('img').forEach((img) => {
+            add(img.getAttribute('data-zoom-image'));
+            add(img.getAttribute('data-large'));
+            add(img.getAttribute('data-large-image'));
+            add(img.getAttribute('data-src'));
+            add(img.getAttribute('src'));
+            const srcset = img.getAttribute('srcset') || '';
+            srcset.split(',').forEach((entry) => {
+              const url = entry.trim().split(/\\s+/)[0];
+              if (url) add(url);
+            });
+          });
+          return Array.from(new Set(out));
+        };
+
+        const isBookImageUrl = (u) => {
+          if (!u) return false;
+          const s = String(u);
+          // Keep only actual book cover/gallery images.
+          return (
+            s.includes('BookshopFiles') ||
+            s.includes('Bookimg') ||
+            s.includes('bookimg')
+          );
+        };
+
+        const scoreNode = (el) => {
+          const imgs = el.querySelectorAll('img');
+          if (imgs.length < 2 || imgs.length > 30) return -1;
+
+          // Heuristic: thumbnail rows usually have small visible images.
+          let smallCount = 0;
+          imgs.forEach((img) => {
+            const r = img.getBoundingClientRect();
+            if (r.width > 20 && r.width <= 220 && r.height > 20 && r.height <= 220) smallCount += 1;
+          });
+
+          const hasNav =
+            el.querySelector('.slick-next, [class*="next"], [aria-label*="Next"], button, a') !== null;
+
+          // Prefer containers that include at least 2 book-image URLs.
+          const urls = imgUrlsFrom(el).filter(isBookImageUrl);
+          if (urls.length < 2) return -1;
+
+          return (smallCount * 10) + urls.length + (hasNav ? 5 : 0);
+        };
+
+        const candidates = Array.from(document.querySelectorAll('body *'))
+          .filter((el) => el.querySelectorAll && el.querySelectorAll('img').length >= 2);
+
+        let best = null;
+        let bestScore = -1;
+        for (const el of candidates) {
+          const s = scoreNode(el);
+          if (s > bestScore) { bestScore = s; best = el; }
+        }
+
+        if (!best) return { urls: [], clicked: false };
+
+        const urls = imgUrlsFrom(best).filter(isBookImageUrl);
+
+        const nextSelectors = [
+          '.slick-next',
+          'button[aria-label*="Next"]',
+          'a[aria-label*="Next"]',
+          'button[class*="next"]',
+          'a[class*="next"]',
+          'button[class*="arrow"]',
+          'a[class*="arrow"]'
+        ];
+
+        let clicked = false;
+        for (const sel of nextSelectors) {
+          const btn = best.querySelector(sel);
+          if (!btn) continue;
+          const disabled = btn.disabled || btn.getAttribute('aria-disabled') === 'true' || btn.classList.contains('disabled');
+          if (disabled) continue;
+          btn.click();
+          clicked = true;
+          break;
+        }
+
+        return { urls, clicked };
+      })()
+    JS
+  end
+
+  def image_urls_from_img(img)
+    urls = []
+
+    urls << img["data-zoom-image"]
+    urls << img["data-large"]
+    urls << img["data-large-image"]
+    urls << img["data-src"]
+    urls << img["src"]
+
+    srcset = img["srcset"].to_s
+    if srcset.present?
+      srcset.split(",").each do |entry|
+        url = entry.to_s.strip.split(/\s+/).first
+        urls << url
+      end
+    end
+
+    urls
+  end
+
+  def normalize_image_url(url)
+    u = url.to_s.strip
+    return if u.blank?
+    return if u.start_with?("data:")
+
+    if u.start_with?("//")
+      u = "https:#{u}"
+    elsif u.start_with?("/")
+      u = "#{BASE_URL}#{u}"
+    end
+
+    return unless u.start_with?("http")
+
+    return if u.match?(/icons?/i)
+    return if u.include?("cdn.taxmann.com/taxmann-images/bookstore/t_s_p_icons_")
+    return if u.match?(%r{/taxmann-images/}i)
+    return if u.match?(%r{/(icons?|sprite|logo)[^/]*\.(png|jpg|jpeg|webp|svg)}i)
+
+    u
   end
 
   def extract_description_from_dom(doc)
@@ -284,7 +529,7 @@ class TaxmannScraper
     lines = text.split("\n").map(&:strip).reject(&:blank?)
     lines.each do |line|
       next if line.length < 5 || line.length > 300
-      next if line.match?(/sign in|log in|cart|menu|home|bookstore|taxmann/i) && line.length < 30
+      next unless valid_title?(line)
       return line
     end
     nil
@@ -296,8 +541,82 @@ class TaxmannScraper
   end
 
   def extract_price_from_text(text)
-    match = text.match(/₹\s*([\d,]+)/)
-    match ? match[1].gsub(",", "").to_f : nil
+    matches = text.scan(/₹\s*([\d,]+)/)
+    return nil if matches.empty?
+
+    prices = matches.map { |m| m[0].gsub(",", "").to_f }
+    prices.max
+  end
+
+  def extract_prices_and_discount(doc, page_text, product_ld)
+    # Try to extract prices and discount from Taxmann's specific layout
+    # Typically: Original Price (struck) | Discounted Price (bold) | Discount %
+
+    # First, try to get prices from page text - look for multiple prices
+    text_prices = page_text.scan(/₹\s*([\d,]+)/).map { |m| m[0].gsub(",", "").to_f }.sort.reverse
+
+    discount_percent = extract_discount_from_dom(doc) || extract_discount_from_text(page_text)
+
+    if text_prices.size >= 2
+      # If we have 2+ prices and a discount %, use them appropriately
+      original_price = text_prices[0]  # Highest price
+      discounted_price = text_prices[1]  # Second highest
+
+      # Verify the discount % matches
+      if discount_percent.present?
+        calculated_discount = ((original_price - discounted_price) / original_price * 100).round(1)
+        if (calculated_discount - discount_percent.to_f).abs < 2  # Allow 2% tolerance
+          return { original_price: original_price, discount_percent: discount_percent }
+        end
+      end
+
+      # If no discount %, calculate it from the prices
+      if original_price > discounted_price
+        calculated_discount = ((original_price - discounted_price) / original_price * 100).round(2)
+        return { original_price: original_price, discount_percent: calculated_discount }
+      end
+
+      return { original_price: original_price, discount_percent: nil }
+    elsif text_prices.size == 1
+      # Only one price found
+      return { original_price: text_prices[0], discount_percent: discount_percent }
+    end
+
+    # Fallback: use JSON-LD data
+    ld_price = extract_price_from_ld(product_ld)
+    return { original_price: ld_price, discount_percent: discount_percent } if ld_price
+
+    { original_price: nil, discount_percent: nil }
+  end
+
+  def extract_discount_from_dom(doc)
+    # Look for discount percentage in common patterns
+    selectors = [
+      "[class*='discount']",
+      "[class*='Discount']",
+      "[class*='off']",
+      "[class*='Off']",
+      "[class*='sale']",
+      "[class*='Sale']"
+    ]
+
+    selectors.each do |sel|
+      doc.css(sel).each do |node|
+        text = node.text.strip
+        # Match patterns like "15% Off", "15% off", "15%"
+        match = text.match(/(\d+(?:\.\d+)?)\s*%/)
+        return match[1].to_f if match
+      end
+    end
+
+    nil
+  end
+
+  def extract_discount_from_text(text)
+    # Look for discount percentage in page text
+    # Patterns: "15% Off", "15% off", "15% discount"
+    match = text.match(/(\d+(?:\.\d+)?)\s*%\s*(?:off|discount|Off|Discount)/i)
+    match ? match[1].to_f : nil
   end
 
   def extract_isbn_from_text(text)
@@ -323,6 +642,22 @@ class TaxmannScraper
         .tr("-", " ")
         .gsub(/\b\w/, &:upcase)
         .presence
+  end
+
+  def valid_title?(value)
+    t = value.to_s.strip
+    return false if t.blank?
+    return false if t.length < 4 || t.length > 500
+
+    normalized = t.downcase.gsub(/\s+/, " ")
+    normalized = normalized.gsub(/[[:punct:]]+\z/, "")
+
+    return false if normalized.match?(/\A(buying options|buy now|add to cart|view content|view sample chapter|quantity|in stock)\b/i)
+    return false if normalized.match?(/\A(sign in|log in|cart|menu|home|bookstore|taxmann)\b/i)
+    return false if normalized.match?(/\A₹\s*[\d,]+/)
+    return false if normalized.match?(/\A(print book|virtual book)\b/i)
+
+    true
   end
 
   # --- Product links extraction ---

@@ -10,9 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_16_000001) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_17_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "book_images", force: :cascade do |t|
+    t.bigint "book_id", null: false
+    t.text "image_url", null: false
+    t.integer "sequence", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["book_id", "sequence"], name: "index_book_images_on_book_id_and_sequence", unique: true
+    t.index ["book_id"], name: "index_book_images_on_book_id"
+  end
 
   create_table "books", force: :cascade do |t|
     t.string "title"
@@ -61,5 +71,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_16_000001) do
     t.index ["url"], name: "index_scraping_urls_on_url", unique: true
   end
 
+  add_foreign_key "book_images", "books"
   add_foreign_key "scrape_logs", "scraping_urls"
 end
