@@ -48,6 +48,7 @@ module Admin
         :price,
         :isbn,
         :publisher,
+        :discount_percent,
         :edition,
         :pages,
         :category,

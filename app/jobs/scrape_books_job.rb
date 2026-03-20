@@ -15,13 +15,22 @@ class ScrapeBooksJob < ApplicationJob
       begin
         if scraping_url.product?
           data = scraper.scrape_product_page
-          Book.upsert_from_scraped(data)
+          book = Book.upsert_from_scraped(data)
+          Rails.logger.info(
+            "[ScrapeBooksJob] Upserted book ##{book.id} from #{data[:source_url] || scraping_url.url} " \
+            "(images=#{Array(data[:image_urls]).size}, stored_images=#{book.book_images.count})"
+          )
           books_found = 1
         else
           results = scraper.scrape_listing_page
+          Rails.logger.info("[ScrapeBooksJob] Listing returned #{results.size} item(s) for #{scraping_url.url}")
           books_found = 0
           results.each do |data|
-            Book.upsert_from_scraped(data)
+            book = Book.upsert_from_scraped(data)
+            Rails.logger.info(
+              "[ScrapeBooksJob] Upserted book ##{book.id} from #{data[:source_url]} " \
+              "(images=#{Array(data[:image_urls]).size}, stored_images=#{book.book_images.count})"
+            )
             books_found += 1
           rescue ActiveRecord::RecordInvalid => e
             Rails.logger.warn("[ScrapeBooksJob] Skipping invalid book (#{data[:source_url]}): #{e.message}")

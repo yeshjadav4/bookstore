@@ -5,16 +5,72 @@
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
     <!-- Book Image -->
-    <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-10 min-h-[400px]">
-      <% if @book.image_url.present? %>
-        <img src="<%= @book.image_url %>" alt="<%= @book.title %>"
-          class="max-h-[500px] max-w-full object-contain rounded-lg shadow-xl"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-        <div class="hidden items-center justify-center text-slate-300">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+    <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-10 min-h-[400px]">
+      <% image_urls = @book.all_image_urls %>
+      <% if image_urls.any? %>
+        <div
+          class=""
+          data-controller="gallery"
+          data-action="keydown->gallery#keydown"
+          tabindex="0"
+        >
+          <div class="flex items-center justify-center">
+            <img
+              data-gallery-target="main"
+              src="<%= image_urls.first %>"
+              alt="<%= @book.title %>"
+              class="max-h-[260px] md:max-h-[300px] w-[92%] object-contain rounded-2xl shadow-md bg-white border border-slate-200 p-3"
+              loading="eager"
+            />
+
+          </div>
+
+          <% if image_urls.size > 1 %>
+            <div class="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                data-action="gallery#prev"
+                class="h-10 w-10 flex items-center justify-center rounded-full bg-white shadow border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                aria-label="Previous image"
+              >
+                <span class="text-2xl leading-none select-none" aria-hidden="true">&#x2039;</span>
+              </button>
+
+              <div
+                data-gallery-target="thumbStrip"
+                class="max-w-[320px] md:max-w-[360px] overflow-x-auto scrollbar-hide"
+              >
+                <div class="flex items-center gap-6 px-2">
+                  <% image_urls.each_with_index do |url, idx| %>
+                    <button
+                      type="button"
+                      data-gallery-target="thumb"
+                      data-action="gallery#select"
+                      data-index="<%= idx %>"
+                      data-full="<%= url %>"
+                      data-alt="<%= @book.title %> image <%= idx + 1 %>"
+                      class="h-16 w-16 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow transition p-2 flex items-center justify-center ring-offset-2"
+                      aria-label="Select image <%= idx + 1 %>"
+                    >
+                      <img src="<%= url %>" alt="" class="max-h-full max-w-full object-contain" loading="lazy" />
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                data-action="gallery#next"
+                class="h-10 w-10 flex items-center justify-center rounded-full bg-white shadow border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                aria-label="Next image"
+              >
+                <span class="text-2xl leading-none select-none" aria-hidden="true">&#x203A;</span>
+              </button>
+            </div>
+          <% end %>
         </div>
       <% else %>
-        <div class="text-slate-300">
+        <div class="h-full flex items-center justify-center text-slate-300">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
         </div>
       <% end %>
@@ -29,38 +85,56 @@
         </span>
       <% end %>
 
-      <h1 class="text-3xl font-extrabold text-slate-800 leading-tight mb-3"><%= @book.title %></h1>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mb-2"><%= @book.title %></h1>
 
       <% if @book.author.present? %>
-        <p class="text-slate-500 text-lg mb-6">by <span class="font-medium text-slate-700"><%= @book.display_author %></span></p>
+        <p class="text-slate-500 text-sm mb-5">by <span class="font-semibold text-slate-600"><%= @book.display_author %></span></p>
       <% end %>
 
-      <!-- Price -->
-      <div class="mb-8">
-        <% if @book.price.present? && @book.price > 0 %>
-          <% if @book.discount? %>
-            <div class="flex items-baseline gap-3">
-              <span class="text-xl text-slate-400 line-through">
-                &#8377; <%= number_with_delimiter(@book.price.to_i) %>
-              </span>
-              <span class="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                &#8377; <%= number_with_delimiter(@book.discounted_price.to_i) %>
-              </span>
-              <% if @book.discount_percent.present? %>
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                  <%= @book.discount_percent.to_i %>% off
-                </span>
-              <% end %>
-            </div>
-          <% else %>
-            <span class="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              &#8377; <%= number_with_delimiter(@book.price.to_i) %>
-            </span>
-          <% end %>
-        <% else %>
-          <span class="text-xl text-slate-400">Price not available</span>
-        <% end %>
+     <!-- Price Section -->
+     <div class="max-w-sm bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-2xl shadow-lg p-5 space-y-4">
+
+    <!-- Top Row: Price + Discount Badge -->
+    <div class="flex items-start justify-between gap-4">
+
+      <!-- Final Price -->
+      <div class="flex-1">
+        <span class="text-4xl md:text-5xl font-extrabold text-emerald-700 leading-tight">
+          ₹<%= number_with_delimiter(@book.discounted_price.to_i) %>
+        </span>
       </div>
+
+      <!-- Discount Badge -->
+      <% if @book.discount_percent.present? %>
+        <div class="bg-red-500 rounded-xl px-4 py-2 shadow-md">
+          <div class="text-white font-black text-xl leading-none">
+            <%= @book.discount_percent.to_i %>%
+          </div>
+          <div class="text-white text-xs font-bold uppercase">OFF</div>
+        </div>
+      <% end %>
+
+    </div>
+
+    <!-- Divider -->
+    <div class="h-px bg-emerald-300"></div>
+
+    <!-- Bottom Row: Original Price + Savings -->
+    <div class="space-y-2">
+
+      <!-- Original Price with strikethrough -->
+      <span class="text-lg font-semibold text-slate-400 line-through decoration-2 decoration-slate-400">
+        ₹<%= number_with_delimiter(@book.price.to_i) %>
+      </span>
+
+      <!-- Savings Badge -->
+      <div class="inline-block bg-emerald-200 text-emerald-900 font-bold px-3 py-1.5 rounded-lg text-sm">
+        💰 Save ₹<%= number_with_delimiter(@book.price.to_i - @book.discounted_price.to_i) %>
+      </div>
+
+    </div>
+
+  </div>
 
       <!-- Details Table -->
       <div class="bg-slate-50 rounded-xl p-5 mb-6">

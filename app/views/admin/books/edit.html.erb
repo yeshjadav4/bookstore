@@ -18,3 +18,42 @@
   <%= render "form", book: @book %>
 </div>
 
+<div class="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-lg font-bold text-slate-900">Images</h2>
+      <p class="text-sm text-slate-500">Sequence 1 is used as the listing image.</p>
+    </div>
+    <%= link_to "View all", admin_book_book_images_path(@book),
+        class: "text-sm font-medium text-indigo-600 hover:text-indigo-800" %>
+  </div>
+
+  <% images = @book.book_images.order(sequence: :asc) %>
+  <% if images.any? %>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <% images.each do |img| %>
+        <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+          <div class="aspect-[3/4] flex items-center justify-center p-2 bg-white">
+            <img src="<%= img.image_url %>" alt=""
+                 class="max-h-full max-w-full object-contain"
+                 loading="lazy" />
+          </div>
+          <div class="px-3 py-2 flex items-center justify-between">
+            <span class="text-xs text-slate-600 font-medium">#<%= img.sequence %></span>
+            <%= button_to "Delete",
+                admin_book_book_image_path(@book, img),
+                method: :delete,
+                form: { class: "inline" },
+                data: { turbo_confirm: "Delete image ##{img.sequence}?" },
+                class: "text-xs font-semibold text-red-600 hover:text-red-800 bg-transparent border-0 p-0 cursor-pointer" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-sm text-slate-500">
+      No images stored yet. Run a scrape for this book’s URL to populate multiple images.
+    </p>
+  <% end %>
+</div>
+
